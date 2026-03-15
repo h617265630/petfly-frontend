@@ -5,7 +5,7 @@
 -- 用户表
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  phone VARCHAR(20) NOT NULL UNIQUE,
+  phone VARCHAR(20) UNIQUE,
   country_code VARCHAR(10) DEFAULT '+86',
   wechat VARCHAR(100),
   role VARCHAR(20) DEFAULT 'OWNER',
