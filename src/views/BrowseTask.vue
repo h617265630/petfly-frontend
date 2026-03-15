@@ -67,7 +67,6 @@
               <span class="px-2 py-1 bg-orange-100 text-orange-500 text-xs font-bold rounded-full">
                 {{ task.pet_type === 'DOG' ? '🐕 狗狗' : '🐱 猫咪' }}
               </span>
-              <span class="text-xs text-gray-400">{{ task.pet_id }}</span>
             </div>
 
             <!-- 路线 -->

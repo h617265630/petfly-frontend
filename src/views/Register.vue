@@ -213,7 +213,7 @@ const handleSubmit = async () => {
   }
   
   try {
-    const user = await userApi.register({
+    await userApi.register({
       username: username.value,
       password: password.value,
       role: role.value,

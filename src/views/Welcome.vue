@@ -96,7 +96,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { userApi, petApi, taskApi } from '../router'
+import { petApi, taskApi } from '../router'
 
 interface Pet {
   id: number
