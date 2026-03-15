@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -9,6 +8,18 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// 简单的健康检查
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'PetFly API is running' });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// 导入路由
+const pool = require('./db');
 
 // ==================== 用户 API ====================
 
@@ -28,6 +39,7 @@ app.get('/users', async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
+    console.error('Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -51,7 +63,6 @@ app.post('/users', async (req, res) => {
   try {
     const { phone, country_code, wechat, role, name, avatar, status, gender, username, password } = req.body;
     
-    // 检查手机号是否已存在
     const checkResult = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
     if (checkResult.rows.length > 0) {
       return res.status(400).json({ error: '手机号已注册' });
@@ -91,7 +102,6 @@ app.post('/users/login', async (req, res) => {
 
 // ==================== 宠物 API ====================
 
-// 获取宠物列表
 app.get('/pets', async (req, res) => {
   try {
     const { owner_id } = req.query;
@@ -111,7 +121,6 @@ app.get('/pets', async (req, res) => {
   }
 });
 
-// 创建宠物
 app.post('/pets', async (req, res) => {
   try {
     const { owner_id, name, type, breed, weight, age_months, gender, image, vaccination_record, health_cert, remark } = req.body;
@@ -128,7 +137,6 @@ app.post('/pets', async (req, res) => {
 
 // ==================== 任务 API ====================
 
-// 获取任务列表
 app.get('/tasks', async (req, res) => {
   try {
     const { status, owner_id } = req.query;
@@ -158,7 +166,6 @@ app.get('/tasks', async (req, res) => {
   }
 });
 
-// 获取单个任务
 app.get('/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -172,7 +179,6 @@ app.get('/tasks/:id', async (req, res) => {
   }
 });
 
-// 创建任务
 app.post('/tasks', async (req, res) => {
   try {
     const { owner_id, pet_id, transport_type, from_city, to_city, middle_city, travel_date, deadline, budget_min, budget_max, remark } = req.body;
@@ -187,7 +193,6 @@ app.post('/tasks', async (req, res) => {
   }
 });
 
-// 更新任务
 app.patch('/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -214,7 +219,6 @@ app.patch('/tasks/:id', async (req, res) => {
 
 // ==================== 申请 API ====================
 
-// 获取申请列表
 app.get('/task_applications', async (req, res) => {
   try {
     const { task_id, flyer_id, status } = req.query;
@@ -248,12 +252,10 @@ app.get('/task_applications', async (req, res) => {
   }
 });
 
-// 创建申请
 app.post('/task_applications', async (req, res) => {
   try {
     const { task_id, flyer_id, from_city, to_city, travel_date, flight_number, introduction, can_handle_pet_type, has_experience, experience_desc, expected_price } = req.body;
     
-    // 检查是否已申请
     const checkResult = await pool.query(
       'SELECT id FROM task_applications WHERE task_id = $1 AND flyer_id = $2',
       [task_id, flyer_id]
@@ -273,7 +275,6 @@ app.post('/task_applications', async (req, res) => {
   }
 });
 
-// 更新申请状态
 app.patch('/task_applications/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -300,7 +301,6 @@ app.patch('/task_applications/:id', async (req, res) => {
 
 // ==================== 通知 API ====================
 
-// 获取通知列表
 app.get('/notifications', async (req, res) => {
   try {
     const { user_id, is_read } = req.query;
@@ -330,7 +330,6 @@ app.get('/notifications', async (req, res) => {
   }
 });
 
-// 创建通知
 app.post('/notifications', async (req, res) => {
   try {
     const { user_id, type, title, content, related_id, related_type } = req.body;
@@ -345,7 +344,6 @@ app.post('/notifications', async (req, res) => {
   }
 });
 
-// 标记通知为已读
 app.patch('/notifications/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
@@ -361,7 +359,6 @@ app.patch('/notifications/:id/read', async (req, res) => {
 
 // ==================== 培飞员资料 API ====================
 
-// 获取培飞员资料
 app.get('/flyer_profiles', async (req, res) => {
   try {
     const { user_id } = req.query;
@@ -380,23 +377,19 @@ app.get('/flyer_profiles', async (req, res) => {
   }
 });
 
-// 创建/更新培飞员资料
 app.post('/flyer_profiles', async (req, res) => {
   try {
     const { user_id, passport_name, passport_number, passport_expiry, visa_type, visa_expiry, has_pet_experience, pet_experience_desc, pet_types_handled } = req.body;
     
-    // 检查是否已存在
     const checkResult = await pool.query('SELECT id FROM flyer_profiles WHERE user_id = $1', [user_id]);
     
     let result;
     if (checkResult.rows.length > 0) {
-      // 更新
       result = await pool.query(
         `UPDATE flyer_profiles SET passport_name = $1, passport_number = $2, passport_expiry = $3, visa_type = $4, visa_expiry = $5, has_pet_experience = $6, pet_experience_desc = $7, pet_types_handled = $8 WHERE user_id = $9 RETURNING *`,
         [passport_name, passport_number, passport_expiry, visa_type, visa_expiry, has_pet_experience, pet_experience_desc, pet_types_handled, user_id]
       );
     } else {
-      // 创建
       result = await pool.query(
         `INSERT INTO flyer_profiles (user_id, passport_name, passport_number, passport_expiry, visa_type, visa_expiry, has_pet_experience, pet_experience_desc, pet_types_handled)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
@@ -411,6 +404,6 @@ app.post('/flyer_profiles', async (req, res) => {
 });
 
 // 启动服务器
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`PetFly API server running on port ${PORT}`);
 });
